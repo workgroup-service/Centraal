@@ -1,5 +1,9 @@
 # Centraal
 
+<p align="center">
+  <img src="public/centraal_icon.png" alt="Centraal" width="128" />
+</p>
+
 GitLab の自分担当 Issue を一覧表示し、作業時間を計測、退勤時に GitLab へ工数を自動送信するデスクトップアプリ。
 
 ## 前提条件
