@@ -1,0 +1,73 @@
+/**
+ * @author Cursor
+ */
+
+import type { GitLabIssue } from "@/types/gitlab";
+
+export const mockIssues: GitLabIssue[] = [
+  {
+    id: 1001,
+    iid: 42,
+    project_id: 10,
+    title: "ログイン画面のバリデーション修正",
+    description: "メールアドレスのバリデーションが不完全",
+    state: "opened",
+    web_url: "https://gitlab.com/team/frontend-app/-/issues/42",
+    projectName: "team/frontend-app",
+    labels: ["bug", "frontend"],
+    created_at: "2026-03-20T09:00:00Z",
+    updated_at: "2026-03-28T14:30:00Z",
+  },
+  {
+    id: 1002,
+    iid: 57,
+    project_id: 10,
+    title: "ダッシュボードにグラフ表示機能を追加",
+    description: "月次売上グラフをダッシュボードに表示する",
+    state: "opened",
+    web_url: "https://gitlab.com/team/frontend-app/-/issues/57",
+    projectName: "team/frontend-app",
+    labels: ["feature", "frontend"],
+    created_at: "2026-03-22T10:15:00Z",
+    updated_at: "2026-03-29T11:00:00Z",
+  },
+  {
+    id: 1003,
+    iid: 63,
+    project_id: 12,
+    title: "API レスポンスのキャッシュ機構実装",
+    description: "頻繁にアクセスされるエンドポイントにRedisキャッシュを導入",
+    state: "opened",
+    web_url: "https://gitlab.com/team/backend-api/-/issues/63",
+    projectName: "team/backend-api",
+    labels: ["enhancement", "backend"],
+    created_at: "2026-03-25T08:00:00Z",
+    updated_at: "2026-03-30T16:45:00Z",
+  },
+  {
+    id: 1004,
+    iid: 71,
+    project_id: 12,
+    title: "ユーザー一覧ページのページネーション対応",
+    description: null,
+    state: "opened",
+    web_url: "https://gitlab.com/team/backend-api/-/issues/71",
+    projectName: "team/backend-api",
+    labels: ["feature"],
+    created_at: "2026-03-27T13:30:00Z",
+    updated_at: "2026-03-31T09:00:00Z",
+  },
+  {
+    id: 1005,
+    iid: 88,
+    project_id: 15,
+    title: "CI/CD パイプラインのテスト並列化",
+    description: "テスト実行時間を短縮するためジョブを並列化する",
+    state: "opened",
+    web_url: "https://gitlab.com/infra/devops-tools/-/issues/88",
+    projectName: "infra/devops-tools",
+    labels: ["devops"],
+    created_at: "2026-03-28T07:45:00Z",
+    updated_at: "2026-03-31T10:00:00Z",
+  },
+];

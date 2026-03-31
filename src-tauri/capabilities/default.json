@@ -5,6 +5,14 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
-    "opener:default"
+    "opener:default",
+    "store:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "https://**/api/v4/**" },
+        { "url": "http://**/api/v4/**" }
+      ]
+    }
   ]
 }
