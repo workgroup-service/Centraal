@@ -54,6 +54,24 @@ function finalizeMs(state: IssueTimerState): number {
   );
 }
 
+function parseAttendanceStatus(value: string | null): AttendanceStatus | null {
+  if (
+    value === "not_started" ||
+    value === "working" ||
+    value === "on_break" ||
+    value === "finished"
+  ) {
+    return value;
+  }
+  return null;
+}
+
+function parseNumber(value: string | null): number | null {
+  if (value === null) return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
 export default function App() {
   const [token, setToken] = useState("");
   const [gitlabUrl, setGitlabUrl] = useState("https://gitlab.com");
@@ -80,6 +98,25 @@ export default function App() {
     if (!persistRef.current) return;
     saveTimerStates(timerStates);
   }, [timerStates]);
+
+  useEffect(() => {
+    if (!persistRef.current) return;
+    void setSettingValue(SETTINGS_KEYS.ATTENDANCE_STATUS, attendanceStatus);
+  }, [attendanceStatus]);
+
+  useEffect(() => {
+    if (!persistRef.current || attendanceStatus !== "working") return;
+
+    void setSettingValue(SETTINGS_KEYS.LAST_ALIVE_AT, String(Date.now()));
+    const id = setInterval(() => {
+      void setSettingValue(SETTINGS_KEYS.LAST_ALIVE_AT, String(Date.now()));
+    }, 5000);
+
+    return () => {
+      clearInterval(id);
+      void setSettingValue(SETTINGS_KEYS.LAST_ALIVE_AT, String(Date.now()));
+    };
+  }, [attendanceStatus]);
 
   // --- Load settings + timer states on mount ---
   const loadIssues = useCallback(
@@ -112,18 +149,62 @@ export default function App() {
     async function init() {
       const savedToken = await getSettingValue(SETTINGS_KEYS.GITLAB_TOKEN);
       const savedUrl = await getSettingValue(SETTINGS_KEYS.GITLAB_URL);
+      const savedAttendance = parseAttendanceStatus(
+        await getSettingValue(SETTINGS_KEYS.ATTENDANCE_STATUS)
+      );
+      const savedLastActiveIssueId = parseNumber(
+        await getSettingValue(SETTINGS_KEYS.LAST_ACTIVE_ISSUE_ID)
+      );
+      const savedLastAliveAt = parseNumber(
+        await getSettingValue(SETTINGS_KEYS.LAST_ALIVE_AT)
+      );
       const resolvedToken = savedToken ?? "";
       const resolvedUrl = savedUrl ?? "https://gitlab.com";
       setToken(resolvedToken);
       setGitlabUrl(resolvedUrl);
+      if (savedAttendance) {
+        setAttendanceStatus(savedAttendance);
+      }
 
       const restored = await loadTimerStates();
       if (restored.size > 0) {
-        setTimerStates(restored);
+        let nextStates = restored;
         const hasRunning = Array.from(restored.values()).some(
           (s) => s.isRunning
         );
-        if (hasRunning) {
+
+        // App was killed during working, but no running timer was persisted.
+        // Resume from the last operated task.
+        if (!hasRunning && savedAttendance === "working") {
+          const resumeIssueId = savedLastActiveIssueId;
+
+          if (resumeIssueId !== null) {
+            const resumed = new Map(restored);
+            const target = resumed.get(resumeIssueId);
+            if (target && target.accumulatedMs > 0) {
+              const now = Date.now();
+              const downtimeMs =
+                savedLastAliveAt !== null
+                  ? Math.max(0, now - savedLastAliveAt)
+                  : 0;
+
+              resumed.set(resumeIssueId, {
+                ...target,
+                accumulatedMs: target.accumulatedMs + downtimeMs,
+                startTime: now,
+                isRunning: true,
+              });
+              nextStates = resumed;
+              toast.info(
+                `前回の勤務状態を復元し、最後のタスク Issue #${resumeIssueId} を再開しました。`
+              );
+            }
+          }
+        }
+
+        setTimerStates(nextStates);
+
+        if (hasRunning || savedAttendance === "working") {
           setAttendanceStatus("working");
         }
       }
@@ -140,6 +221,9 @@ export default function App() {
 
   // --- Timer toggle (start / stop, exclusive) ---
   const handleToggleTimer = useCallback((issueId: number) => {
+    void setSettingValue(SETTINGS_KEYS.LAST_ACTIVE_ISSUE_ID, String(issueId));
+    void setSettingValue(SETTINGS_KEYS.LAST_ALIVE_AT, String(Date.now()));
+
     setTimerStates((prev) => {
       const current = prev.get(issueId);
 

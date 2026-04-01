@@ -54,6 +54,9 @@ export const SETTINGS_KEYS = {
   GITLAB_TOKEN: "gitlab_token",
   GITLAB_URL: "gitlab_url",
   TIMER_STATES: "timer_states",
+  ATTENDANCE_STATUS: "attendance_status",
+  LAST_ACTIVE_ISSUE_ID: "last_active_issue_id",
+  LAST_ALIVE_AT: "last_alive_at",
 } as const;
 
 interface SerializedTimerState {
