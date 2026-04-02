@@ -31,13 +31,12 @@ export function AttendanceBar({
   const isWorking = status === "working";
   const isOnBreak = status === "on_break";
   const isActive = isWorking || isOnBreak;
-  const isFinished = status === "finished";
 
   return (
     <div className="flex items-center gap-3">
       <Button
         onClick={onClockIn}
-        disabled={disabled || isActive || isFinished}
+        disabled={disabled || isActive}
         variant={status === "not_started" ? "default" : "outline"}
       >
         <LogIn data-icon="inline-start" className="size-4" />
