@@ -333,6 +333,15 @@ export default function App() {
     await saveTimerStates(new Map());
   }, [timerStates, issues, gitlabUrl, token]);
 
+  /** 工数を GitLab に送らず、全タイマーを 0 にして退勤済み状態へ。 */
+  const handleClockOutWithoutSend = useCallback(async () => {
+    setAttendanceStatus("finished");
+    setTimerStates(new Map());
+    await saveTimerStates(new Map());
+    setSettingsOpen(false);
+    toast.info("工数を送信せずに退勤しました。タイマーをリセットしました。");
+  }, []);
+
   const handleSaveSettings = useCallback(
     async (newToken: string, newUrl: string) => {
       setToken(newToken);
@@ -427,6 +436,8 @@ export default function App() {
         token={token}
         gitlabUrl={gitlabUrl}
         onSave={handleSaveSettings}
+        posting={posting}
+        onClockOutWithoutSend={handleClockOutWithoutSend}
       />
 
       <Toaster richColors position="bottom-right" />

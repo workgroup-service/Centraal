@@ -21,6 +21,9 @@ interface SettingsDialogProps {
   token: string;
   gitlabUrl: string;
   onSave: (token: string, gitlabUrl: string) => void;
+  /** 通常の退勤送信中は競合を避けるため無効化に使う */
+  posting?: boolean;
+  onClockOutWithoutSend?: () => void | Promise<void>;
 }
 
 export function SettingsDialog({
@@ -29,6 +32,8 @@ export function SettingsDialog({
   token,
   gitlabUrl,
   onSave,
+  posting = false,
+  onClockOutWithoutSend,
 }: SettingsDialogProps) {
   const [draftToken, setDraftToken] = useState(token);
   const [draftUrl, setDraftUrl] = useState(gitlabUrl);
@@ -76,6 +81,23 @@ export function SettingsDialog({
               onChange={(e) => setDraftUrl(e.target.value)}
             />
           </div>
+
+          {onClockOutWithoutSend && (
+            <div className="flex flex-col gap-2 border-t pt-4">
+              <p className="text-sm text-muted-foreground">
+                記録した工数を GitLab に送らず、全タイマーを 0
+                にして退勤済みにします。
+              </p>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={posting}
+                onClick={() => void onClockOutWithoutSend()}
+              >
+                送信せずに退勤する
+              </Button>
+            </div>
+          )}
         </div>
 
         <DialogFooter>
