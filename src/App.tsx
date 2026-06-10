@@ -7,6 +7,14 @@ import { Settings, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { AttendanceBar } from "@/components/AttendanceBar";
 import type { AttendanceStatus } from "@/components/AttendanceBar";
 import { IssueSearchBar } from "@/components/IssueSearchBar";
@@ -19,6 +27,8 @@ import {
   setSettingValue,
   saveTimerStates,
   loadTimerStates,
+  saveCachedIssues,
+  loadCachedIssues,
   SETTINGS_KEYS,
 } from "@/lib/store";
 import {
@@ -88,6 +98,8 @@ export default function App() {
 
   const [issues, setIssues] = useState<GitLabIssue[]>([]);
   const [issuesLoading, setIssuesLoading] = useState(false);
+  const [fetchErrorOpen, setFetchErrorOpen] = useState(false);
+  const [fetchErrorMessage, setFetchErrorMessage] = useState("");
 
   const hasToken = token.trim().length > 0;
   const isWorking = attendanceStatus === "working";
@@ -126,18 +138,21 @@ export default function App() {
       try {
         const fetched = await fetchAssignedIssues(currentUrl, currentToken);
         setIssues(fetched);
+        await saveCachedIssues(fetched);
+        setFetchErrorOpen(false);
+        setFetchErrorMessage("");
         if (fetched.length === 0) {
           toast.info("アサインされている Issue はありません。");
         }
       } catch (err) {
         if (err instanceof GitLabApiError) {
-          toast.error(err.message);
+          setFetchErrorMessage(err.message);
         } else if (err instanceof Error) {
-          toast.error(`通信エラー: ${err.message}`);
+          setFetchErrorMessage(`通信エラー: ${err.message}`);
         } else {
-          toast.error("Issue の取得に失敗しました。");
+          setFetchErrorMessage("Issue の取得に失敗しました。");
         }
-        setIssues([]);
+        setFetchErrorOpen(true);
       } finally {
         setIssuesLoading(false);
       }
@@ -162,6 +177,10 @@ export default function App() {
       const resolvedUrl = savedUrl ?? "https://gitlab.com";
       setToken(resolvedToken);
       setGitlabUrl(resolvedUrl);
+      const cachedIssues = await loadCachedIssues();
+      if (cachedIssues.length > 0) {
+        setIssues(cachedIssues);
+      }
       if (savedAttendance) {
         setAttendanceStatus(savedAttendance);
       }
@@ -211,13 +230,9 @@ export default function App() {
 
       persistRef.current = true;
       setLoaded(true);
-
-      if (resolvedToken.trim()) {
-        loadIssues(resolvedToken, resolvedUrl);
-      }
     }
     init();
-  }, [loadIssues]);
+  }, []);
 
   // --- Timer toggle (start / stop, exclusive) ---
   const handleToggleTimer = useCallback((issueId: number) => {
@@ -350,11 +365,8 @@ export default function App() {
       await setSettingValue(SETTINGS_KEYS.GITLAB_URL, newUrl);
       setSettingsOpen(false);
       toast.success("設定を保存しました。");
-      if (newToken.trim()) {
-        loadIssues(newToken, newUrl);
-      }
     },
-    [loadIssues]
+    []
   );
 
   const handleRefresh = useCallback(() => {
@@ -439,6 +451,35 @@ export default function App() {
         posting={posting}
         onClockOutWithoutSend={handleClockOutWithoutSend}
       />
+
+      <Dialog open={fetchErrorOpen} onOpenChange={setFetchErrorOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>タスク取得エラー</DialogTitle>
+            <DialogDescription>
+              インターネット接続または GitLab の状態を確認してください。
+              <br />
+              前回取得したタスクを表示しています。
+            </DialogDescription>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground break-words">
+            {fetchErrorMessage}
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFetchErrorOpen(false)}>
+              閉じる
+            </Button>
+            <Button
+              onClick={() => {
+                void loadIssues(token, gitlabUrl);
+              }}
+              disabled={issuesLoading}
+            >
+              再読み込み
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Toaster richColors position="bottom-right" />
     </div>

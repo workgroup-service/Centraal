@@ -6,7 +6,7 @@
  */
 
 import { load, type Store } from "@tauri-apps/plugin-store";
-import type { IssueTimerState } from "@/types/gitlab";
+import type { GitLabIssue, IssueTimerState } from "@/types/gitlab";
 
 const STORE_FILE = "settings.json";
 
@@ -57,6 +57,7 @@ export const SETTINGS_KEYS = {
   ATTENDANCE_STATUS: "attendance_status",
   LAST_ACTIVE_ISSUE_ID: "last_active_issue_id",
   LAST_ALIVE_AT: "last_alive_at",
+  CACHED_ISSUES: "cached_issues",
 } as const;
 
 interface SerializedTimerState {
@@ -106,4 +107,46 @@ export async function loadTimerStates(): Promise<Map<number, IssueTimerState>> {
   }
 
   return map;
+}
+
+export async function saveCachedIssues(issues: GitLabIssue[]): Promise<void> {
+  if (!isTauriEnv()) {
+    memoryStore.set(SETTINGS_KEYS.CACHED_ISSUES, issues);
+    return;
+  }
+  const store = await getStore();
+  await store.set(SETTINGS_KEYS.CACHED_ISSUES, issues);
+}
+
+export async function loadCachedIssues(): Promise<GitLabIssue[]> {
+  let raw: unknown;
+  if (!isTauriEnv()) {
+    raw = memoryStore.get(SETTINGS_KEYS.CACHED_ISSUES);
+  } else {
+    const store = await getStore();
+    raw = await store.get<GitLabIssue[]>(SETTINGS_KEYS.CACHED_ISSUES);
+  }
+
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((entry) => entry as Partial<GitLabIssue>)
+    .filter((entry) => typeof entry.id === "number" && typeof entry.iid === "number")
+    .map((entry) => ({
+      id: entry.id as number,
+      iid: entry.iid as number,
+      project_id: Number(entry.project_id ?? 0),
+      title: String(entry.title ?? ""),
+      description:
+        entry.description === null || entry.description === undefined
+          ? null
+          : String(entry.description),
+      state: entry.state === "closed" ? "closed" : "opened",
+      web_url: String(entry.web_url ?? ""),
+      projectName: String(entry.projectName ?? ""),
+      labels: Array.isArray(entry.labels)
+        ? entry.labels.map((label) => String(label))
+        : [],
+      created_at: String(entry.created_at ?? ""),
+      updated_at: String(entry.updated_at ?? ""),
+    }));
 }
